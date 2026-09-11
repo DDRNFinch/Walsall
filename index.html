@@ -22,7 +22,30 @@
 </nav>
 <div id="modal" class="modal hidden"></div>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
+<script>
+// PDF/photo rules: do not require a fixed number of photos. Learners can download with any photos they have captured; missing slots remain blank in the 3x2 photo page.
+(function(){
+  const originalOpenPack=window.openPack;
+  window.openPack=async function(i){
+    await originalOpenPack(i);
+    const btn=document.querySelector('button[onclick^="downloadPack("]');
+    if(btn){btn.disabled=false;btn.removeAttribute('disabled');}
+  };
+  const originalDownloadPack=window.downloadPack;
+  window.downloadPack=async function(i){
+    const p=state.packs[i],e=state.evidence[p.id]||{};
+    if(!e.signature){toast('Please sign the touchscreen signature box before downloading');return}
+    if((e.statement||'').trim().length<100){toast('Please complete the statement with at least 100 words');return}
+    const photos=await Promise.all(p.capture.map((_,n)=>photoGet(photoKey(p.id,n))));
+    const doc=newPdf();
+    drawPhotoPage(doc,p,photos);
+    drawDetailsPage(doc,p,e);
+    const safe=(p.title||'evidence-pack').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
+    doc.save(`walsall-${safe}-${formatUKDate(e.signedDate||todayISO()).replaceAll('/','-')}.pdf`);
+  };
+})();
+</script>
 <script>
 (function(){
   const btn=document.getElementById('installBtn');
@@ -40,6 +63,6 @@
   });
 })();
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5').catch(()=>{}));}</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6').catch(()=>{}));}</script>
 </body>
 </html>
