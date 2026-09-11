@@ -9,10 +9,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Walsall">
 <title>Walsall Evidence</title>
-<link rel="manifest" href="manifest.webmanifest?v=3">
-<link rel="icon" href="icon.svg?v=3" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg?v=3">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="manifest" href="manifest.webmanifest?v=4">
+<link rel="icon" href="icon.svg?v=4" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg?v=4">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 <header class="topbar"><div><strong>Walsall Evidence</strong><span id="courseLabel">Loading course…</span></div><div class="top-actions"><button id="installBtn" class="install-btn hidden" type="button">Install</button><button id="profileBtn" class="icon-btn" aria-label="Profile">⚙</button></div></header>
@@ -22,7 +22,7 @@
 </nav>
 <div id="modal" class="modal hidden"></div>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="app.js?v=2"></script>
+<script src="app.js?v=4"></script>
 <script>
 (function(){
   const btn=document.getElementById('installBtn');
@@ -36,10 +36,10 @@
   btn.addEventListener('click',async()=>{
     if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;btn.classList.add('hidden');return;}
     if(isIOS){alert('To install Walsall on iPhone: tap Share, then Add to Home Screen, then Add.');return;}
-    alert('Use your browser menu and choose Install app or Add to Home screen.');
+    alert('Use your browser menu and choose Install app or Add to home screen.');
   });
 })();
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3').catch(()=>{}));}</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=4').catch(()=>{}));}</script>
 </body>
 </html>
