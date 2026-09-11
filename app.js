@@ -2,29 +2,16 @@
 
 const NAXOS='https://raw.githubusercontent.com/DDRNFinch/Naxosv2/main/';
 const SOURCE=NAXOS+'data/evidence-packs-source.json';
-const APP_VERSION='4';
 const state={view:'home',course:null,packs:[],courses:{},profile:{name:'',courseKey:'ST0095'},evidence:{},otj:[],currentPack:0};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
 const dbPromise=new Promise((resolve,reject)=>{const r=indexedDB.open('walsall-evidence',1);r.onupgradeneeded=()=>r.result.createObjectStore('photos');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
 async function photoPut(key,value){const db=await dbPromise;return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').put(value,key);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
 async function photoGet(key){const db=await dbPromise;return new Promise((res,rej)=>{const r=db.transaction('photos').objectStore('photos').get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function photoDelete(key){const db=await dbPromise;return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').delete(key);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
 function photoKey(id,n){return id+'::'+n}
-
-async function load(){
-  try{const saved=JSON.parse(localStorage.getItem('walsall-state')||'null');if(saved){Object.assign(state,saved);state.profile=saved.profile||state.profile;state.evidence=saved.evidence||{};state.otj=saved.otj||[];state.currentPack=saved.currentPack||0}}
-  catch(e){console.warn('Saved data reset',e)}
-  try{await loadCourse(state.profile.courseKey||'ST0095');render()}catch(e){console.error(e);$('#app').innerHTML=`<div class="page"><div class="card"><h2>Course could not load</h2><p class="muted">Walsall could not read the Naxosv2 course pack.</p><pre>${esc(e.stack||e)}</pre></div></div>`}
-}
-async function loadCourse(key){
-  const source=await fetch(SOURCE,{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Could not load Naxos source');return r.json()});
-  state.courses=Object.fromEntries(Object.entries(source.courses||{}).filter(([,v])=>v.type==='standard-main-packs'));
-  const cfg=source.courses[key];if(!cfg)throw Error('Course not found in Naxosv2: '+key);if(cfg.type!=='standard-main-packs')throw Error('This learner build currently supports standard learner packs.');
-  const packs=await fetch(NAXOS+'data/standards/'+key+'/main-packs.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Could not load '+key+' packs');return r.json()});
-  state.course={key,config:cfg,metadata:packs};state.packs=packs.packs||[];state.profile.courseKey=key;save();$('#courseLabel').textContent=key+' · '+state.packs.length+' packs';
-}
+async function load(){try{const saved=JSON.parse(localStorage.getItem('walsall-state')||'null');if(saved){Object.assign(state,saved);state.profile=saved.profile||state.profile;state.evidence=saved.evidence||{};state.otj=saved.otj||[];state.currentPack=saved.currentPack||0}}catch(e){console.warn('Saved data reset',e)}try{await loadCourse(state.profile.courseKey||'ST0095');render()}catch(e){console.error(e);$('#app').innerHTML=`<div class="page"><div class="card"><h2>Course could not load</h2><p class="muted">Walsall could not read the Naxosv2 course pack.</p><pre>${esc(e.stack||e)}</pre></div></div>`}}
+async function loadCourse(key){const source=await fetch(SOURCE,{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Could not load Naxos source');return r.json()});state.courses=Object.fromEntries(Object.entries(source.courses||{}).filter(([,v])=>v.type==='standard-main-packs'));const cfg=source.courses[key];if(!cfg)throw Error('Course not found in Naxosv2: '+key);if(cfg.type!=='standard-main-packs')throw Error('This learner build currently supports standard learner packs.');const packs=await fetch(NAXOS+'data/standards/'+key+'/main-packs.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Could not load '+key+' packs');return r.json()});state.course={key,config:cfg,metadata:packs};state.packs=packs.packs||[];state.profile.courseKey=key;save();$('#courseLabel').textContent=key+' · '+state.packs.length+' packs'}
 function save(){localStorage.setItem('walsall-state',JSON.stringify(state))}
 function pct(pack){const e=state.evidence[pack.id]||{photos:[],statement:''};const photos=Math.min((e.photos||[]).filter(Boolean).length,pack.capture.length);const statement=(e.statement||'').trim().length>=100?1:0;return Math.round((photos/pack.capture.length)*80+statement*20)}
 function status(pack){const p=pct(pack);return p>=100?'Complete':p?'In progress':'Not started'}
@@ -44,46 +31,16 @@ function deleteOTJ(i){state.otj.splice(i,1);save();renderOTJ()}
 function renderProfile(){const opts=Object.keys(state.courses).map(k=>`<option value="${esc(k)}" ${k===state.profile.courseKey?'selected':''}>${esc(k)}</option>`).join('');$('#app').innerHTML=`<div class="page"><div class="card stack"><h1>Profile</h1><label>Name<input class="input" id="name" value="${esc(state.profile.name)}" placeholder="Your name"></label><label>Course<select class="input" id="course">${opts}</select></label><button class="btn primary full" onclick="saveProfile()">Save profile</button><p class="muted">Course packs are read directly from Naxosv2. Learners can select their assigned course, but cannot change its pack content.</p></div></div>`}
 async function saveProfile(){const newKey=$('#course').value;state.profile.name=$('#name').value.trim();if(newKey!==state.profile.courseKey){try{await loadCourse(newKey)}catch(e){toast(e.message);return}}save();renderHome();toast('Profile saved')}
 function go(v){state.view=v;render()}
-
 function newPdf(){const {jsPDF}=window.jspdf;return new jsPDF({unit:'mm',format:'a4',compress:true})}
 const PDF={left:15,right:15,top:18,bottom:18,width:180,pageH:297};
-function pageHeader(doc,title,subtitle){doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text(title,PDF.left,PDF.top);doc.setFont('helvetica','normal');doc.setFontSize(9);if(subtitle)doc.text(subtitle,PDF.left,PDF.top+6);return PDF.top+15}
+function writeWrapped(doc,text,x,y,width,line=4.8){const lines=doc.splitTextToSize(String(text||''),width);for(const lineText of lines){doc.text(lineText,x,y);y+=line}return y}
+function pageHeader(doc,title,subtitle){doc.setFont('helvetica','bold');doc.setFontSize(17);let y=PDF.top;const titleLines=doc.splitTextToSize(String(title||''),PDF.width);doc.text(titleLines,PDF.left,y);y+=titleLines.length*6;if(subtitle){doc.setFont('helvetica','normal');doc.setFontSize(9);y=writeWrapped(doc,subtitle,PDF.left,y,PDF.width,4)}return y+5}
 function footer(doc,page){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text('Walsall Evidence',PDF.left,PDF.pageH-9);doc.text(`Page ${page}`,PDF.pageH-25,PDF.pageH-9,{align:'right'})}
 function ensureSpace(doc,y,needed,page,title,subtitle){if(y+needed>PDF.pageH-PDF.bottom){footer(doc,page);doc.addPage();page++;y=pageHeader(doc,title,subtitle)}return {y,page}}
-function writeWrapped(doc,text,x,y,width,line=4.8){const lines=doc.splitTextToSize(String(text||''),width);for(const lineText of lines){doc.text(lineText,x,y);y+=line}return y}
 function addImageFit(doc,data,x,y,maxW,maxH){const props=doc.getImageProperties(data);const ratio=Math.min(maxW/props.width,maxH/props.height);const w=props.width*ratio,h=props.height*ratio;doc.addImage(data,'JPEG',x,y,w,h);return {w,h}}
-function addPhotoBlock(doc,data,label,y,page,title,subtitle){doc.setFont('helvetica','bold');doc.setFontSize(10);let s=ensureSpace(doc,y,10,page,title,subtitle);y=s.y;page=s.page;doc.text(label,PDF.left,y);y+=5;const maxH=92;const fit=addImageFit(doc,data,PDF.left,y,PDF.width,maxH);y+=fit.h+7;return {y,page}}
-
-async function downloadPack(i){
-  const p=state.packs[i],e=state.evidence[p.id];
-  if(pct(p)<100){toast('Complete the photos and statement first');return}
-  const photos=await Promise.all(p.capture.map((_,n)=>photoGet(photoKey(p.id,n))));
-  if(photos.some(x=>!x)){toast('One or more photos are missing');return}
-  const doc=newPdf();let page=1;let y=pageHeader(doc,'Evidence Pack',p.title);
-  doc.setFontSize(10);doc.setFont('helvetica','normal');
-  y=writeWrapped(doc,`Learner: ${state.profile.name||'Not entered'}`,PDF.left,y,PDF.width);y+=4;
-  y=writeWrapped(doc,`Course: ${state.profile.courseKey}`,PDF.left,y,PDF.width);y+=7;
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Pack summary',PDF.left,y);y+=5;doc.setFont('helvetica','normal');doc.setFontSize(10);y=writeWrapped(doc,p.summary,PDF.left,y,PDF.width);y+=7;
-  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Evidence photographs',PDF.left,y);y+=8;doc.setFont('helvetica','normal');doc.setFontSize(10);
-  for(let n=0;n<p.capture.length;n++){
-    const s=ensureSpace(doc,y,112,page,'Evidence Pack',p.title);y=s.y;page=s.page;
-    const result=addPhotoBlock(doc,photos[n],`${n+1}. ${p.capture[n]}`,y,page,'Evidence Pack',p.title);y=result.y;page=result.page;
-  }
-  let s=ensureSpace(doc,y,35,page,'Evidence Pack',p.title);y=s.y;page=s.page;y+=2;
-  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text('Learner statement',PDF.left,y);y+=7;doc.setFont('helvetica','normal');doc.setFontSize(10);y=writeWrapped(doc,e.statement,PDF.left,y,PDF.width);y+=8;
-  s=ensureSpace(doc,y,30,page,'Evidence Pack',p.title);y=s.y;page=s.page;
-  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Mapped KSBs',PDF.left,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(9);y=writeWrapped(doc,(p.primaryKSBs||[]).join(' · '),PDF.left,y,PDF.width,4.2);y+=6;
-  footer(doc,page);doc.save(`${safe(p.title)} - ${safe(state.profile.name||'Learner')}.pdf`)
-}
-function downloadOTJ(){
-  const doc=newPdf();let page=1;let y=pageHeader(doc,'Off-the-job training record',state.profile.courseKey);
-  doc.setFont('helvetica','normal');doc.setFontSize(10);y=writeWrapped(doc,`Learner: ${state.profile.name||'Not entered'}`,PDF.left,y,PDF.width);y+=4;const total=state.otj.reduce((a,b)=>a+Number(b.hours||0),0);y=writeWrapped(doc,`Total hours: ${total.toFixed(1)}`,PDF.left,y,PDF.width);y+=8;
-  state.otj.forEach((x,i)=>{
-    let s=ensureSpace(doc,y,35,page,'Off-the-job training record',state.profile.courseKey);y=s.y;page=s.page;
-    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(`${x.date} — ${Number(x.hours).toFixed(1)} hours`,PDF.left,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(10);y=writeWrapped(doc,x.activity,PDF.left,y,PDF.width);if(x.learning){y+=2;doc.setFont('helvetica','italic');y=writeWrapped(doc,'Learning: '+x.learning,PDF.left,y,PDF.width)}y+=7;doc.setFont('helvetica','normal');
-  });
-  footer(doc,page);doc.save(`${safe(state.profile.name||'Learner')} - Off the Job Training.pdf`)
-}
+function addPhotoBlock(doc,data,label,y,page,title,subtitle){const labelLines=doc.splitTextToSize(label,PDF.width);const needed=labelLines.length*4.5+105;let s=ensureSpace(doc,y,needed,page,title,subtitle);y=s.y;page=s.page;doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(labelLines,PDF.left,y);y+=labelLines.length*4.5+2;const fit=addImageFit(doc,data,PDF.left,y,PDF.width,92);y+=fit.h+7;return {y,page}}
+async function downloadPack(i){const p=state.packs[i],e=state.evidence[p.id];if(pct(p)<100){toast('Complete the photos and statement first');return}const photos=await Promise.all(p.capture.map((_,n)=>photoGet(photoKey(p.id,n))));if(photos.some(x=>!x)){toast('One or more photos are missing');return}const doc=newPdf();let page=1;let y=pageHeader(doc,'Evidence Pack',p.title);doc.setFont('helvetica','normal');doc.setFontSize(10);y=writeWrapped(doc,`Learner: ${state.profile.name||'Not entered'}`,PDF.left,y,PDF.width);y+=4;y=writeWrapped(doc,`Course: ${state.profile.courseKey}`,PDF.left,y,PDF.width);y+=7;doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Pack summary',PDF.left,y);y+=5;doc.setFont('helvetica','normal');doc.setFontSize(10);y=writeWrapped(doc,p.summary,PDF.left,y,PDF.width);y+=7;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Evidence photographs',PDF.left,y);y+=8;doc.setFont('helvetica','normal');doc.setFontSize(10);for(let n=0;n<p.capture.length;n++){const result=addPhotoBlock(doc,photos[n],`${n+1}. ${p.capture[n]}`,y,page,'Evidence Pack',p.title);y=result.y;page=result.page}let s=ensureSpace(doc,y,35,page,'Evidence Pack',p.title);y=s.y;page=s.page;y+=2;doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text('Learner statement',PDF.left,y);y+=7;doc.setFont('helvetica','normal');doc.setFontSize(10);y=writeWrapped(doc,e.statement,PDF.left,y,PDF.width);y+=8;s=ensureSpace(doc,y,30,page,'Evidence Pack',p.title);y=s.y;page=s.page;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Mapped KSBs',PDF.left,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(9);y=writeWrapped(doc,(p.primaryKSBs||[]).join(' · '),PDF.left,y,PDF.width,4.2);footer(doc,page);doc.save(`${safe(p.title)} - ${safe(state.profile.name||'Learner')}.pdf`)}
+function downloadOTJ(){const doc=newPdf();let page=1;let y=pageHeader(doc,'Off-the-job training record',state.profile.courseKey);doc.setFont('helvetica','normal');doc.setFontSize(10);y=writeWrapped(doc,`Learner: ${state.profile.name||'Not entered'}`,PDF.left,y,PDF.width);y+=4;const total=state.otj.reduce((a,b)=>a+Number(b.hours||0),0);y=writeWrapped(doc,`Total hours: ${total.toFixed(1)}`,PDF.left,y,PDF.width);y+=8;state.otj.forEach(x=>{let s=ensureSpace(doc,y,35,page,'Off-the-job training record',state.profile.courseKey);y=s.y;page=s.page;doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(`${x.date} — ${Number(x.hours).toFixed(1)} hours`,PDF.left,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(10);y=writeWrapped(doc,x.activity,PDF.left,y,PDF.width);if(x.learning){y+=2;doc.setFont('helvetica','italic');y=writeWrapped(doc,'Learning: '+x.learning,PDF.left,y,PDF.width)}y+=7;doc.setFont('helvetica','normal')});footer(doc,page);doc.save(`${safe(state.profile.name||'Learner')} - Off the Job Training.pdf`)}
 function safe(s){return String(s||'').replace(/[^a-z0-9 _-]/gi,'').trim()||'Evidence'}
 function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),1800)}
 document.querySelectorAll('.bottom-nav button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));$('#profileBtn').addEventListener('click',()=>go('profile'));load();
