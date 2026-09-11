@@ -12,7 +12,7 @@
 <title>Walsall Evidence</title>
 <link rel="manifest" href="manifest.webmanifest?v=5">
 <link rel="icon" href="icon.svg?v=5" type="image/svg+xml">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <header class="topbar"><div><strong>Walsall Evidence</strong><span id="courseLabel">Loading course…</span></div><div class="top-actions"><button id="installBtn" class="install-btn hidden" type="button">Install</button><button id="profileBtn" class="icon-btn" aria-label="Profile">⚙</button></div></header>
@@ -25,86 +25,20 @@
 (function(){
   const originalOpenPack=window.openPack;
   let ksbDescriptions={};
-  async function loadKSBs(){
-    if(Object.keys(ksbDescriptions).length)return;
-    try{const key=state.profile.courseKey||'ST0095';const r=await fetch('https://raw.githubusercontent.com/DDRNFinch/Naxosv2/main/data/standards/'+encodeURIComponent(key)+'/ksb-registry.json',{cache:'no-store'});const j=await r.json();ksbDescriptions=j.items||{}}catch(e){console.warn('KSB descriptions unavailable',e)}}
+  async function loadKSBs(){if(Object.keys(ksbDescriptions).length)return;try{const key=state.profile.courseKey||'ST0095';const r=await fetch('https://raw.githubusercontent.com/DDRNFinch/Naxosv2/main/data/standards/'+encodeURIComponent(key)+'/ksb-registry.json',{cache:'no-store'});const j=await r.json();ksbDescriptions=j.items||{}}catch(e){console.warn('KSB descriptions unavailable',e)}}
   function saveKSB(id,ksb,value){state.evidence[id]=state.evidence[id]||{photos:[],statement:'',signature:'',signedDate:'',ksbResponses:{}};state.evidence[id].ksbResponses=state.evidence[id].ksbResponses||{};state.evidence[id].ksbResponses[ksb]=value;save()}
-  function addKSBBoxes(p,e){
-    const mapped=[...(p.primaryKSBs||[])].filter(x=>/^K\d+$/i.test(x)||/^B\d+$/i.test(x)).filter((x,n,a)=>a.indexOf(x)===n);
-    const card=[...document.querySelectorAll('.card')].find(x=>x.querySelector('h3')?.textContent.trim()==='Mapped KSBs');
-    if(!card||!mapped.length)return;
-    card.innerHTML='<h3>KSB knowledge & behaviours</h3><p class="muted">Explain how your evidence demonstrates each mapped knowledge or behaviour. Your answer is saved automatically.</p><div class="ksb-list">'+mapped.map(k=>`<div class="ksb-box"><div class="ksb-code">${esc(k)}</div><div class="ksb-description">${esc(ksbDescriptions[k]||'Description unavailable')}</div><textarea class="ksb-response" placeholder="Explain what you know or how you demonstrated this…" oninput="saveKSB('${p.id}','${k}',this.value)">${esc(e.ksbResponses?.[k]||'')}</textarea></div>`).join('')+'</div>';
-  }
+  function addKSBBoxes(p,e){const mapped=[...(p.primaryKSBs||[])].filter(x=>/^K\d+$/i.test(x)||/^B\d+$/i.test(x)).filter((x,n,a)=>a.indexOf(x)===n);const card=[...document.querySelectorAll('.card')].find(x=>x.querySelector('h3')?.textContent.trim()==='Mapped KSBs');if(!card||!mapped.length)return;card.innerHTML='<h3>KSB knowledge & behaviours</h3><p class="muted">Explain how your evidence demonstrates each mapped knowledge or behaviour. Your answer is saved automatically.</p><div class="ksb-list">'+mapped.map(k=>`<div class="ksb-box"><div class="ksb-code">${esc(k)}</div><div class="ksb-description">${esc(ksbDescriptions[k]||'Description unavailable')}</div><textarea class="ksb-response" placeholder="Explain what you know or how you demonstrated this…" oninput="saveKSB('${p.id}','${k}',this.value)">${esc(e.ksbResponses?.[k]||'')}</textarea></div>`).join('')+'</div>'}
   window.saveKSB=saveKSB;
-  window.openPack=async function(i){
-    await originalOpenPack(i); await loadKSBs();
-    const p=state.packs[i],e=state.evidence[p.id]||{};
-    const grid=document.querySelector('.photo-grid');
-    if(grid&&grid.children.length<6)grid.insertAdjacentHTML('beforeend',photoBox(p.id,5,'Additional photo',null));
-    addKSBBoxes(p,e);
-    const btn=document.querySelector('button[onclick^="downloadPack("]');if(btn){btn.disabled=false;btn.removeAttribute('disabled')}
-  };
+  window.openPack=async function(i){await originalOpenPack(i);await loadKSBs();const p=state.packs[i],e=state.evidence[p.id]||{};const grid=document.querySelector('.photo-grid');if(grid&&grid.children.length<6)grid.insertAdjacentHTML('beforeend',photoBox(p.id,5,'Additional photo',null));addKSBBoxes(p,e);const btn=document.querySelector('button[onclick^="downloadPack("]');if(btn){btn.disabled=false;btn.removeAttribute('disabled')}};
   function hardWrap(text){return String(text||'').split(/\n/).map(line=>line.replace(/([^\s]{35})/g,'$1\u200b')).join('\n')}
   function wrapLines(doc,text,width,size){doc.setFontSize(size);return doc.splitTextToSize(hardWrap(text),width)}
-  function drawTextBox(doc,title,text,x,y,w,h,size=8,line=3.6){
-    doc.setDrawColor(185);doc.setLineWidth(0.4);doc.rect(x,y,w,h);
-    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text(title,x+3,y+5);
-    doc.setFont('helvetica','normal');const lines=wrapLines(doc,text,w-6,size);let ty=y+10;const maxLines=Math.max(1,Math.floor((h-12)/line));
-    for(let n=0;n<Math.min(lines.length,maxLines);n++){doc.text(lines[n],x+3,ty);ty+=line}
-    return lines.length<=maxLines;
-  }
-  function drawDetailsSafe(doc,p,e){
-    const L=14,R=196,W=R-L;
-    let page=2;doc.addPage();
-    function footerNow(){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('Walsall Evidence',L,291);doc.text(`Page ${page}`,R,291,{align:'right'})}
-    function newDetailsPage(){footerNow();doc.addPage();page++;return 16}
-    let y=16;
-    doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('Evidence Details',L,y);y+=8;
-    doc.setFont('helvetica','normal');doc.setFontSize(8);
-    const headerLines=wrapLines(doc,`Learner: ${state.profile.name||'Not entered'} | Course: ${state.profile.courseKey||''} | Pack: ${p.title}`,W,8);
-    headerLines.forEach(t=>{if(y<284){doc.text(t,L,y);y+=3.5}});y+=3;
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Photo details',L,y);y+=5;
-    doc.setFont('helvetica','normal');doc.setFontSize(7.5);
-    for(let n=0;n<6;n++){const lines=wrapLines(doc,`${n+1}. ${p.capture[n]||'Additional photo'}`,W,7.5);for(const t of lines){if(y>283)y=newDetailsPage();doc.text(t,L,y);y+=3.2}y+=1}
-    y+=2;
-    const statementLines=wrapLines(doc,e.statement||'',W-6,8);
-    const statementHeight=Math.max(30,Math.min(95,12+statementLines.length*3.6));
-    if(y+statementHeight>285)y=newDetailsPage();
-    drawTextBox(doc,'Learner statement',e.statement||'',L,y,W,statementHeight,8,3.6);y+=statementHeight+6;
-    const mapped=[...(p.primaryKSBs||[])].filter(x=>/^K\d+$/i.test(x)||/^B\d+$/i.test(x)).filter((x,n,a)=>a.indexOf(x)===n);
-    if(y+12>285)y=newDetailsPage();
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('KSB explanations',L,y);y+=6;
-    for(const k of mapped){
-      const descLines=wrapLines(doc,ksbDescriptions[k]||'Description unavailable',W-10,6.2);
-      const respLines=wrapLines(doc,e.ksbResponses?.[k]||'No explanation entered.',W-10,6.5);
-      const boxH=Math.max(20,11+descLines.length*2.7+respLines.length*2.8+5);
-      if(y+boxH>285)y=newDetailsPage();
-      doc.setDrawColor(205);doc.rect(L,y,W,boxH);
-      doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text(k,L+3,y+5);
-      doc.setFont('helvetica','normal');doc.setFontSize(6.2);let ty=y+9;for(const t of descLines){doc.text(t,L+3,ty);ty+=2.7}
-      doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.text('Learner explanation:',L+3,ty+1);ty+=4;
-      doc.setFont('helvetica','normal');doc.setFontSize(6.5);for(const t of respLines){doc.text(t,L+3,ty);ty+=2.8}
-      y+=boxH+4;
-    }
-    if(y+38>285)y=newDetailsPage();
-    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('Learner signature',L,y);y+=4;
-    if(e.signature)doc.addImage(e.signature,'PNG',L,y,55,17);else doc.text('Not signed',L,y+5);
-    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text(`Signed electronically on ${e.signedDate||todayISO()}`,L+62,y+8);
-    footerNow();
-  }
-  window.downloadPack=async function(i){
-    const p=state.packs[i],e=state.evidence[p.id]||{};
-    if(!e.signature){toast('Please sign the touchscreen signature box before downloading');return}
-    if((e.statement||'').trim().length<100){toast('Please complete the statement with at least 100 words');return}
-    await loadKSBs();
-    const photos=await Promise.all(Array.from({length:6},(_,n)=>photoGet(photoKey(p.id,n)).catch(()=>null)));
-    const doc=newPdf();drawPhotoPage(doc,p,photos);drawDetailsSafe(doc,p,e);
-    const safe=(p.title||'evidence-pack').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();doc.save(`walsall-${safe}-${formatUKDate(e.signedDate||todayISO()).replaceAll('/','-')}.pdf`);
-  };
+  function drawTextBox(doc,title,text,x,y,w,h,size=8,line=3.6){doc.setDrawColor(185);doc.setLineWidth(.4);doc.rect(x,y,w,h);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text(title,x+3,y+5);doc.setFont('helvetica','normal');const lines=wrapLines(doc,text,w-6,size);let ty=y+10;const maxLines=Math.max(1,Math.floor((h-12)/line));for(let n=0;n<Math.min(lines.length,maxLines);n++){doc.text(lines[n],x+3,ty);ty+=line}return lines.length<=maxLines}
+  function drawDetailsSafe(doc,p,e){const L=14,R=196,W=R-L;let page=2;doc.addPage();function footerNow(){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('Walsall Evidence',L,291);doc.text(`Page ${page}`,R,291,{align:'right'})}function newDetailsPage(){footerNow();doc.addPage();page++;return 16}let y=16;doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('Evidence Details',L,y);y+=8;doc.setFont('helvetica','normal');doc.setFontSize(8);const headerLines=wrapLines(doc,`Learner: ${state.profile.name||'Not entered'} | Course: ${state.profile.courseKey||''} | Pack: ${p.title}`,W,8);headerLines.forEach(t=>{if(y<284){doc.text(t,L,y);y+=3.5}});y+=3;doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Photo details',L,y);y+=5;doc.setFont('helvetica','normal');doc.setFontSize(7.5);for(let n=0;n<6;n++){const lines=wrapLines(doc,`${n+1}. ${p.capture[n]||'Additional photo'}`,W,7.5);for(const t of lines){if(y>283)y=newDetailsPage();doc.text(t,L,y);y+=3.2}y+=1}y+=2;const statementLines=wrapLines(doc,e.statement||'',W-6,8);const statementHeight=Math.max(30,Math.min(95,12+statementLines.length*3.6));if(y+statementHeight>285)y=newDetailsPage();drawTextBox(doc,'Learner statement',e.statement||'',L,y,W,statementHeight,8,3.6);y+=statementHeight+6;const mapped=[...(p.primaryKSBs||[])].filter(x=>/^K\d+$/i.test(x)||/^B\d+$/i.test(x)).filter((x,n,a)=>a.indexOf(x)===n);if(y+12>285)y=newDetailsPage();doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('KSB explanations',L,y);y+=6;for(const k of mapped){const descLines=wrapLines(doc,ksbDescriptions[k]||'Description unavailable',W-10,6.2);const respLines=wrapLines(doc,e.ksbResponses?.[k]||'No explanation entered.',W-10,6.5);const boxH=Math.max(20,11+descLines.length*2.7+respLines.length*2.8+5);if(y+boxH>285)y=newDetailsPage();doc.setDrawColor(205);doc.rect(L,y,W,boxH);doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text(k,L+3,y+5);doc.setFont('helvetica','normal');doc.setFontSize(6.2);let ty=y+9;for(const t of descLines){doc.text(t,L+3,ty);ty+=2.7}doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.text('Learner explanation:',L+3,ty+1);ty+=4;doc.setFont('helvetica','normal');doc.setFontSize(6.5);for(const t of respLines){doc.text(t,L+3,ty);ty+=2.8}y+=boxH+4}if(y+38>285)y=newDetailsPage();doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('Learner signature',L,y);y+=4;if(e.signature)doc.addImage(e.signature,'PNG',L,y,55,17);else doc.text('Not signed',L,y+5);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text(`Signed electronically on ${e.signedDate||todayISO()}`,L+62,y+8);footerNow()}
+  window.downloadPack=async function(i){const p=state.packs[i],e=state.evidence[p.id]||{};if(!e.signature){toast('Please sign the touchscreen signature box before downloading');return}if((e.statement||'').trim().length<100){toast('Please complete the statement with at least 100 words');return}await loadKSBs();const photos=await Promise.all(Array.from({length:6},(_,n)=>photoGet(photoKey(p.id,n)).catch(()=>null)));const doc=newPdf();drawPhotoPage(doc,p,photos);drawDetailsSafe(doc,p,e);const safe=(p.title||'evidence-pack').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();doc.save(`walsall-${safe}-${formatUKDate(e.signedDate||todayISO()).replaceAll('/','-')}.pdf`)};
 })();
 </script>
 <script>
 (function(){const btn=document.getElementById('installBtn');let deferredPrompt=null;const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;if(standalone){btn.classList.add('hidden');return}window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;btn.classList.remove('hidden')});window.addEventListener('appinstalled',()=>{deferredPrompt=null;btn.classList.add('hidden')});if(isIOS)btn.classList.remove('hidden');btn.addEventListener('click',async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;btn.classList.add('hidden');return}if(isIOS){alert('To install Walsall on iPhone: tap Share, then Add to Home Screen, then Add.');return}alert('Use your browser menu and choose Install app or Add to home screen.')})})();
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=10').catch(()=>{}))}</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=11').catch(()=>{}))}</script>
 </body></html>
