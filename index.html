@@ -12,7 +12,7 @@
 <title>Walsall Evidence</title>
 <link rel="manifest" href="manifest.webmanifest?v=5">
 <link rel="icon" href="icon.svg?v=5" type="image/svg+xml">
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 <header class="topbar"><div><strong>Walsall Evidence</strong><span id="courseLabel">Loading course…</span></div><div class="top-actions"><button id="installBtn" class="install-btn hidden" type="button">Install</button><button id="profileBtn" class="icon-btn" aria-label="Profile">⚙</button></div></header>
@@ -33,7 +33,7 @@
     const mapped=[...(p.primaryKSBs||[])].filter(x=>/^K\d+$/i.test(x)||/^B\d+$/i.test(x)).filter((x,n,a)=>a.indexOf(x)===n);
     const card=[...document.querySelectorAll('.card')].find(x=>x.querySelector('h3')?.textContent.trim()==='Mapped KSBs');
     if(!card||!mapped.length)return;
-    card.innerHTML='<h3>KSB knowledge & behaviours</h3><p class="muted">Explain how your evidence demonstrates each mapped knowledge or behaviour. Your answer is saved automatically.</p><div class="ksb-list">'+mapped.map(k=>`<div class="ksb-box"><div class="ksb-code">${k}</div><div class="ksb-description">${esc(ksbDescriptions[k]||'Description unavailable')}</div><textarea class="ksb-response" placeholder="Explain what you know or how you demonstrated this…" oninput="saveKSB('${p.id}','${k}',this.value)">${esc(e.ksbResponses?.[k]||'')}</textarea></div>`).join('')+'</div>';
+    card.innerHTML='<h3>KSB knowledge & behaviours</h3><p class="muted">Explain how your evidence demonstrates each mapped knowledge or behaviour. Your answer is saved automatically.</p><div class="ksb-list">'+mapped.map(k=>`<div class="ksb-box"><div class="ksb-code">${esc(k)}</div><div class="ksb-description">${esc(ksbDescriptions[k]||'Description unavailable')}</div><textarea class="ksb-response" placeholder="Explain what you know or how you demonstrated this…" oninput="saveKSB('${p.id}','${k}',this.value)">${esc(e.ksbResponses?.[k]||'')}</textarea></div>`).join('')+'</div>';
   }
   window.saveKSB=saveKSB;
   window.openPack=async function(i){
@@ -44,17 +44,28 @@
     addKSBBoxes(p,e);
     const btn=document.querySelector('button[onclick^="downloadPack("]');if(btn){btn.disabled=false;btn.removeAttribute('disabled')}
   };
-  function write(doc,text,x,y,w,size=7.5,line=3.4){doc.setFontSize(size);const lines=doc.splitTextToSize(String(text||''),w);for(const t of lines){if(y>280)return y;doc.text(t,x,y);y+=line}return y}
+  function hardWrap(text){return String(text||'').split(/\n/).map(line=>line.replace(/([^\s]{35})/g,'$1\u200b')).join('\n')}
+  function write(doc,text,x,y,w,size=7.5,line=3.4){doc.setFontSize(size);const lines=doc.splitTextToSize(hardWrap(text),w);for(const t of lines){if(y>279)return 279;doc.text(t,x,y);y+=line}return y}
   function drawDetailsSafe(doc,p,e){
-    doc.addPage();const L=12,W=186;let y=16;
+    doc.addPage();
+    const L=14,R=196,W=R-L;let y=16;
     doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('Evidence Details',L,y);y+=8;
     doc.setFont('helvetica','normal');y=write(doc,`Learner: ${state.profile.name||'Not entered'} | Course: ${state.profile.courseKey||''} | Pack: ${p.title}`,L,y,W,8,3.5);y+=3;
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Learner statement',L,y);y+=5;doc.setFont('helvetica','normal');y=write(doc,e.statement||'',L,y,W,8,3.6);y+=4;
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Learner statement',L,y);y+=5;
+    doc.setFont('helvetica','normal');y=write(doc,e.statement||'',L,y,W,8,3.6);y+=4;
     const mapped=[...(p.primaryKSBs||[])].filter(x=>/^K\d+$/i.test(x)||/^B\d+$/i.test(x)).filter((x,n,a)=>a.indexOf(x)===n);
     doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('KSB explanations',L,y);y+=5;
-    for(const k of mapped){if(y>270)break;doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text(k,L,y);y+=3.5;doc.setFont('helvetica','normal');y=write(doc,ksbDescriptions[k]||'Description unavailable',L+5,y,W-5,6.2,2.7);y+=1;doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.text('Learner explanation:',L+5,y);y+=3;doc.setFont('helvetica','normal');y=write(doc,e.ksbResponses?.[k]||'No explanation entered.',L+5,y,W-5,6.5,2.8);y+=2}
-    if(y<245)y=245;doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('Signature',L,y);y+=4;if(e.signature){doc.addImage(e.signature,'PNG',L,y,55,17);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text(`Signed: ${e.signedDate||todayISO()}`,L+62,y+8)}else doc.text('Not signed',L,y+5);
-    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('Walsall Evidence',L,291);doc.text('Page 2 of 2',198,291,{align:'right'});
+    for(const k of mapped){
+      if(y>265)break;
+      doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text(k,L,y);y+=3.5;
+      doc.setFont('helvetica','normal');y=write(doc,ksbDescriptions[k]||'Description unavailable',L+5,y,W-5,6.2,2.7);y+=1;
+      doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.text('Learner explanation:',L+5,y);y+=3;
+      doc.setFont('helvetica','normal');y=write(doc,e.ksbResponses?.[k]||'No explanation entered.',L+5,y,W-5,6.5,2.8);y+=2;
+    }
+    if(y>247)y=247;
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('Signature',L,y);y+=4;
+    if(e.signature){doc.addImage(e.signature,'PNG',L,y,55,17);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text(`Signed: ${e.signedDate||todayISO()}`,L+62,y+8)}else doc.text('Not signed',L,y+5);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('Walsall Evidence',L,291);doc.text('Page 2 of 2',R,291,{align:'right'});
   }
   window.downloadPack=async function(i){
     const p=state.packs[i],e=state.evidence[p.id]||{};
@@ -70,5 +81,5 @@
 <script>
 (function(){const btn=document.getElementById('installBtn');let deferredPrompt=null;const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;if(standalone){btn.classList.add('hidden');return}window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;btn.classList.remove('hidden')});window.addEventListener('appinstalled',()=>{deferredPrompt=null;btn.classList.add('hidden')});if(isIOS)btn.classList.remove('hidden');btn.addEventListener('click',async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;btn.classList.add('hidden');return}if(isIOS){alert('To install Walsall on iPhone: tap Share, then Add to Home Screen, then Add.');return}alert('Use your browser menu and choose Install app or Add to home screen.')})})();
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=8').catch(()=>{}))}</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=9').catch(()=>{}))}</script>
 </body></html>
