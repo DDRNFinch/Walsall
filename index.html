@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
-<header class="topbar"><div><strong>Walsall Evidence</strong><span id="courseLabel">Loading course…</span></div><div class="top-actions"><button id="installBtn" class="install-btn hidden" type="button">Install</button><button id="profileBtn" class="icon-btn" aria-label="Profile">⚙</button></div></div></header>
+<header class="topbar"><div><strong>Walsall Evidence</strong><span id="courseLabel">Loading course…</span></div><div class="top-actions"><button id="installBtn" class="install-btn hidden" type="button">Install</button><button id="profileBtn" class="icon-btn" aria-label="Profile">⚙</button></div></header>
 <main id="app"><div class="loading">Loading your course packs…</div></main>
 <nav class="bottom-nav"><button data-view="home">Home</button><button data-view="packs">Packs</button><button data-view="otj">OTJ</button><button data-view="profile">Profile</button></nav>
 <div id="modal" class="modal hidden"></div>
@@ -34,5 +34,5 @@
 <script>
 (function(){const btn=document.getElementById('installBtn');let deferredPrompt=null;const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;if(standalone){btn.classList.add('hidden');return}window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;btn.classList.remove('hidden')});window.addEventListener('appinstalled',()=>{deferredPrompt=null;btn.classList.add('hidden')});if(isIOS)btn.classList.remove('hidden');btn.addEventListener('click',async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;btn.classList.add('hidden');return}if(isIOS){alert('To install Walsall on iPhone: tap Share, then Add to Home Screen, then Add.');return}alert('Use your browser menu and choose Install app or Add to home screen.')})})();
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=21').catch(()=>{}))}</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=22').catch(()=>{}))}</script>
 </body></html>
