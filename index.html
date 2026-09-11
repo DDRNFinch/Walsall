@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-touch-icon" content="icon.svg?v=5">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Walsall">
 <title>Walsall Evidence</title>
@@ -22,19 +21,11 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="app.js?v=9"></script>
 <script>
-(function(){
-  const originalOpenPack=window.openPack;
-  let ksbDescriptions={};
-  async function loadKSBs(){if(Object.keys(ksbDescriptions).length)return;try{const key=state.profile.courseKey||'ST0095';const r=await fetch('https://raw.githubusercontent.com/DDRNFinch/Naxosv2/main/data/standards/'+encodeURIComponent(key)+'/ksb-registry.json',{cache:'no-store'});const j=await r.json();ksbDescriptions=j.items||{}}catch(e){console.warn('KSB descriptions unavailable',e)}}
-  function saveKSB(id,ksb,value){state.evidence[id]=state.evidence[id]||{photos:[],statement:'',signature:'',signedDate:'',ksbResponses:{}};state.evidence[id].ksbResponses=state.evidence[id].ksbResponses||{};state.evidence[id].ksbResponses[ksb]=value;save()}
-  function addKSBBoxes(p,e){const mapped=[...(p.primaryKSBs||[])].filter(x=>/^K\d+$/i.test(x)||/^B\d+$/i.test(x)).filter((x,n,a)=>a.indexOf(x)===n);const card=[...document.querySelectorAll('.card')].find(x=>x.querySelector('h3')?.textContent.trim()==='Mapped KSBs');if(!card||!mapped.length)return;card.innerHTML='<h3>KSB knowledge & behaviours</h3><p class="muted">Explain how your evidence demonstrates each mapped knowledge or behaviour. Your answer is saved automatically.</p><div class="ksb-list">'+mapped.map(k=>`<div class="ksb-box"><div class="ksb-code">${esc(k)}</div><div class="ksb-description">${esc(ksbDescriptions[k]||'Description unavailable')}</div><textarea class="ksb-response" placeholder="Explain what you know or how you demonstrated this…" oninput="saveKSB('${p.id}','${k}',this.value)">${esc(e.ksbResponses?.[k]||'')}</textarea></div>`).join('')+'</div>'}
-  window.saveKSB=saveKSB;
-  window.openPack=async function(i){await originalOpenPack(i);await loadKSBs();const p=state.packs[i],e=state.evidence[p.id]||{};const grid=document.querySelector('.photo-grid');if(grid&&grid.children.length<6)grid.insertAdjacentHTML('beforeend',photoBox(p.id,5,'Additional photo',null));addKSBBoxes(p,e);const btn=document.querySelector('button[onclick^="downloadPack("]');if(btn){btn.disabled=false;btn.removeAttribute('disabled')}};
-})();
+(function(){const originalOpenPack=window.openPack;let ksbDescriptions={};async function loadKSBs(){if(Object.keys(ksbDescriptions).length)return;try{const key=state.profile.courseKey||'ST0095';const r=await fetch('https://raw.githubusercontent.com/DDRNFinch/Naxosv2/main/data/standards/'+encodeURIComponent(key)+'/ksb-registry.json',{cache:'no-store'});const j=await r.json();ksbDescriptions=j.items||{}}catch(e){console.warn('KSB descriptions unavailable',e)}}function saveKSB(id,ksb,value){state.evidence[id]=state.evidence[id]||{photos:[],statement:'',signature:'',signedDate:'',ksbResponses:{}};state.evidence[id].ksbResponses=state.evidence[id].ksbResponses||{};state.evidence[id].ksbResponses[ksb]=value;save()}function addKSBBoxes(p,e){const mapped=[...(p.primaryKSBs||[])].filter(x=>/^K\d+$/i.test(x)||/^B\d+$/i.test(x)).filter((x,n,a)=>a.indexOf(x)===n);const card=[...document.querySelectorAll('.card')].find(x=>x.querySelector('h3')?.textContent.trim()==='Mapped KSBs');if(!card||!mapped.length)return;card.innerHTML='<h3>KSB knowledge & behaviours</h3><p class="muted">Explain how your evidence demonstrates each mapped knowledge or behaviour. Your answer is saved automatically.</p><div class="ksb-list">'+mapped.map(k=>`<div class="ksb-box"><div class="ksb-code">${esc(k)}</div><div class="ksb-description">${esc(ksbDescriptions[k]||'Description unavailable')}</div><textarea class="ksb-response" placeholder="Explain what you know or how you demonstrated this…" oninput="saveKSB('${p.id}','${k}',this.value)">${esc(e.ksbResponses?.[k]||'')}</textarea></div>`).join('')+'</div>'}window.saveKSB=saveKSB;window.openPack=async function(i){await originalOpenPack(i);await loadKSBs();const p=state.packs[i],e=state.evidence[p.id]||{};const grid=document.querySelector('.photo-grid');if(grid&&grid.children.length<6)grid.insertAdjacentHTML('beforeend',photoBox(p.id,5,'Additional photo',null));addKSBBoxes(p,e);const btn=document.querySelector('button[onclick^="downloadPack("]');if(btn){btn.disabled=false;btn.removeAttribute('disabled')}}})();
 </script>
-<script src="enhancements.js?v=1"></script>
+<script src="enhancements.js?v=2"></script>
 <script>
 (function(){const btn=document.getElementById('installBtn');let deferredPrompt=null;const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;if(standalone){btn.classList.add('hidden');return}window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;btn.classList.remove('hidden')});window.addEventListener('appinstalled',()=>{deferredPrompt=null;btn.classList.add('hidden')});if(isIOS)btn.classList.remove('hidden');btn.addEventListener('click',async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;btn.classList.add('hidden');return}if(isIOS){alert('To install Walsall on iPhone: tap Share, then Add to Home Screen, then Add.');return}alert('Use your browser menu and choose Install app or Add to home screen.')})})();
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=12').catch(()=>{}))}</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=13').catch(()=>{}))}</script>
 </body></html>
