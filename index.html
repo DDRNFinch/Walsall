@@ -6,12 +6,12 @@
 <meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-touch-icon" content="icon.svg?v=4">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Walsall">
 <title>Walsall Evidence</title>
 <link rel="manifest" href="manifest.webmanifest?v=5">
 <link rel="icon" href="icon.svg?v=4" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg?v=4">
 <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
@@ -22,9 +22,9 @@
 </nav>
 <div id="modal" class="modal hidden"></div>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 <script>
-// PDF/photo rules: do not require a fixed number of photos. Learners can download with any photos they have captured; missing slots remain blank in the 3x2 photo page.
+// Learners are NOT required to provide six photos. Any number of captured photos is accepted; unused PDF slots remain blank.
 (function(){
   const originalOpenPack=window.openPack;
   window.openPack=async function(i){
@@ -32,12 +32,11 @@
     const btn=document.querySelector('button[onclick^="downloadPack("]');
     if(btn){btn.disabled=false;btn.removeAttribute('disabled');}
   };
-  const originalDownloadPack=window.downloadPack;
   window.downloadPack=async function(i){
     const p=state.packs[i],e=state.evidence[p.id]||{};
     if(!e.signature){toast('Please sign the touchscreen signature box before downloading');return}
     if((e.statement||'').trim().length<100){toast('Please complete the statement with at least 100 words');return}
-    const photos=await Promise.all(p.capture.map((_,n)=>photoGet(photoKey(p.id,n))));
+    const photos=await Promise.all(p.capture.map((_,n)=>photoGet(photoKey(p.id,n)).catch(()=>null)));
     const doc=newPdf();
     drawPhotoPage(doc,p,photos);
     drawDetailsPage(doc,p,e);
@@ -63,6 +62,6 @@
   });
 })();
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6').catch(()=>{}));}</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=7').catch(()=>{}));}</script>
 </body>
 </html>
