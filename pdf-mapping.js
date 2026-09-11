@@ -16,6 +16,8 @@
   }
 
   function acIds(pack) {
+    if (Array.isArray(pack.linkedACs)) return unique(pack.linkedACs);
+    if (Array.isArray(pack.assessmentCriteria)) return unique(pack.assessmentCriteria.map(x => typeof x === 'object' ? x.id : x));
     const unit = pack.unit;
     if (!unit || !Array.isArray(unit.learningOutcomes)) return [];
     return unique(unit.learningOutcomes.flatMap(lo => (lo.criteria || []).map(c => String(c.id))));
@@ -35,7 +37,6 @@
     const groups = ksbGroups(pack);
     const acs = is6570 ? acIds(pack) : [];
 
-    // Do not add an empty mapping page.
     if (!is6570 && !groups.Knowledge.length && !groups.Skills.length && !groups.Behaviours.length) return;
     if (is6570 && !acs.length) return;
 
@@ -58,13 +59,13 @@
       y += 7;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      y = writeWrapped(doc, acs.join(', '), PDF.left, y, PDF.width, 4.5);
+      writeWrapped(doc, acs.join(', '), PDF.left, y, PDF.width, 4.5);
     } else {
       y = addLine(doc, 'Knowledge', groups.Knowledge, PDF.left, y, PDF.width);
       y += 5;
       y = addLine(doc, 'Skills', groups.Skills, PDF.left, y, PDF.width);
       y += 5;
-      y = addLine(doc, 'Behaviours', groups.Behaviours, PDF.left, y, PDF.width);
+      addLine(doc, 'Behaviours', groups.Behaviours, PDF.left, y, PDF.width);
     }
 
     footer(doc, doc.getNumberOfPages());
