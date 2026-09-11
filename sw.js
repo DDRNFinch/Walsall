@@ -1,5 +1,5 @@
-const CACHE='walsall-v14';
-const CORE=['./','./index.html','./styles.css?v=7','./app.js?v=9','./enhancements.js?v=2','./confidence.js?v=1','./manifest.webmanifest?v=5','./icon.svg?v=5'];
+const CACHE='walsall-v15';
+const CORE=['./','./index.html','./styles.css?v=8','./app.js?v=9','./6570-05-integration.js?v=1','./enhancements.js?v=2','./confidence.js?v=1','./manifest.webmanifest?v=5','./icon.svg?v=5'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith((async()=>{const cached=await caches.match(event.request);if(cached)return cached;try{const response=await fetch(event.request);if(response&&response.ok){const c=await caches.open(CACHE);c.put(event.request,response.clone()).catch(()=>{});}return response}catch(e){return cached||new Response('',{status:503})}})())});
