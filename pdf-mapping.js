@@ -21,28 +21,17 @@
     return unique(unit.learningOutcomes.flatMap(lo => (lo.criteria || []).map(c => String(c.id))));
   }
 
-  function addLine(doc, label, values, x, y, width) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text(label, x, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    const text = values.length ? values.join(', ') : 'None linked';
-    return writeWrapped(doc, text, x + 34, y, width - 34, 4.2) + 1;
-  }
-
   function addMappingPage(doc, pack) {
     const is6570 = state.profile.courseKey === '6570-05';
     const groups = ksbGroups(pack);
     const acs = is6570 ? acIds(pack) : [];
-
     if (!is6570 && !groups.Knowledge.length && !groups.Skills.length && !groups.Behaviours.length) return;
     if (is6570 && !acs.length) return;
 
     doc.addPage();
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text(is6570 ? 'Assessment Criteria' : 'KSBs', PDF.left, PDF.top + 3);
+    doc.text(is6570 ? 'Acs' : 'KSBs', PDF.left, PDF.top + 3);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.text(pack.title, PDF.left, PDF.top + 10);
@@ -51,48 +40,51 @@
     if (is6570) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.text('Acs', PDF.left, y);
-      y += 8;
-      doc.setFontSize(10);
       doc.text(`Unit ${pack.unitId || ''}`, PDF.left, y);
-      y += 7;
+      y += 8;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       writeWrapped(doc, acs.join(', '), PDF.left, y, PDF.width, 4.5);
     } else {
-      y = addLine(doc, 'Knowledge', groups.Knowledge, PDF.left, y, PDF.width);
-      y += 5;
-      y = addLine(doc, 'Skills', groups.Skills, PDF.left, y, PDF.width);
-      y += 5;
-      addLine(doc, 'Behaviours', groups.Behaviours, PDF.left, y, PDF.width);
+      const line = (label, values) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text(label, PDF.left, y);
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        y = writeWrapped(doc, values.length ? values.join(', ') : 'None linked', PDF.left, y, PDF.width, 4.5) + 5;
+      };
+      line('Knowledge', groups.Knowledge);
+      line('Skills', groups.Skills);
+      line('Behaviours', groups.Behaviours);
     }
-
     footer(doc, doc.getNumberOfPages());
   }
 
-  // app.js keeps drawDetailsPage and downloadPack as lexical functions, so
-  // replacing window.drawDetailsPage does not intercept the PDF. Instead,
-  // append the mapping immediately before jsPDF saves the completed PDF.
-  function installSaveHook() {
-    if (!window.jspdf || !window.jspdf.jsPDF || window.jspdf.jsPDF.prototype.__walsallMappingHook) return;
+  async function directDownloadPack(i) {
+    const p = state.packs[i];
+    const e = state.evidence[p.id] || {};
+    if (pct(p) < 100) { toast('Complete the photos and statement first'); return; }
+    if (!e.signature) { toast('Please sign the touchscreen signature box before downloading'); return; }
 
-    const originalSave = window.jspdf.jsPDF.prototype.save;
-    window.jspdf.jsPDF.prototype.save = function(filename, options) {
-      try {
-        const pack = state && Array.isArray(state.packs) ? state.packs[state.currentPack] : null;
-        if (pack && !this.__walsallMappingAdded) {
-          addMappingPage(this, pack);
-          this.__walsallMappingAdded = true;
-        }
-      } catch (e) {
-        console.warn('Walsall PDF mapping could not be added', e);
-      }
-      return originalSave.call(this, filename, options);
-    };
+    const photos = await Promise.all((p.capture || []).slice(0, 6).map((_, n) => photoGet(photoKey(p.id, n))));
+    const required = state.profile.courseKey === '6570-05' ? Math.min((p.capture || []).length, 6) : 6;
+    if (photos.length < required || photos.slice(0, required).some(x => !x)) {
+      toast(`All ${required} photos are required before downloading`);
+      return;
+    }
 
-    window.jspdf.jsPDF.prototype.__walsallMappingHook = true;
+    const doc = newPdf();
+    drawPhotoPage(doc, p, photos);
+    drawDetailsPage(doc, p, e);
+    addMappingPage(doc, p);
+    const safe = (p.title || 'evidence-pack').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+    doc.save(`walsall-${safe}-${formatUKDate(e.signedDate || todayISO()).replaceAll('/', '-')}.pdf`);
   }
 
-  installSaveHook();
-  window.addEventListener('load', installSaveHook);
+  // The original downloadPack is a lexical function inside app.js. Replacing
+  // the global function directly is the reliable way to make the PDF use the
+  // mapping-aware export without changing the existing evidence workflow.
+  window.downloadPack = directDownloadPack;
 })();
